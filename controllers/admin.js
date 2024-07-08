@@ -1,6 +1,7 @@
 const { ValidationError } = require("sequelize");
 const Product = require("../models/product");
 const { validationResult } = require("express-validator");
+const mongoose = require("mongoose");
 
 exports.getAddProduct = (req, res, next) => {
   res.render("admin/edit-product", {
@@ -9,7 +10,7 @@ exports.getAddProduct = (req, res, next) => {
     editing: false,
     hasError: false,
     errorMessage: null,
-    validationErrors: []
+    validationErrors: [],
   });
 };
 
@@ -21,52 +22,54 @@ exports.postAddProduct = (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
-    return res.status(422).render('admin/edit-product', {
-      pageTitle: 'Add Product',
-      path: '/admin/edit-product',
+    return res.status(422).render("admin/edit-product", {
+      pageTitle: "Add Product",
+      path: "/admin/edit-product",
       editing: false,
       hasError: true,
       product: { title, imageUrl, price, description },
       errorMessage: errors.array()[0].msg,
-      validationErrors: errors.array()
+      validationErrors: errors.array(),
     });
   }
 
   const product = new Product({
+    //_id: mongoose.Types.ObjectId("6687bd6c575ba15124ca476e"),
     title: title,
     price: price,
     description: description,
     imageUrl: imageUrl,
-    userId: req.user
+    userId: req.user,
   });
   product
     .save()
-    .then(result => {
-      console.log('Created Product');
-      res.redirect('/admin/products');
+    .then((result) => {
+      console.log("Created Product");
+      res.redirect("/admin/products");
     })
-    .catch(err => {
-      console.log(err);
-      res.status(500).render('admin/edit-product', {
-        pageTitle: 'Add Product',
-        path: '/admin/add-product',
-        editing: false,
-        hasError: true,
-        product: { title, imageUrl, price, description },
-        errorMessage: 'Database operation failed, please try again.',
-        validationErrors: []
-      });
+    .catch((err) => {
+      //console.log(err);
+      // res.status(500).render("admin/edit-product", {
+      //   pageTitle: "Add Product",
+      //   path: "/admin/add-product",
+      //   editing: false,
+      //   hasError: true,
+      //   product: { title, imageUrl, price, description },
+      //   errorMessage: "Database operation failed, please try again.",
+      //   validationErrors: [],
+      // });
+      res.redirect('/500')
     });
 };
 
 exports.getEditProduct = (req, res, next) => {
-  const editMode = req.query.edit === 'true';
+  const editMode = req.query.edit === "true";
   if (!editMode) {
     return res.redirect("/");
   }
   const prodId = req.params.productId;
   Product.findById(prodId)
-    .then(product => {
+    .then((product) => {
       if (!product) {
         return res.redirect("/");
       }
@@ -77,12 +80,13 @@ exports.getEditProduct = (req, res, next) => {
         product: product,
         hasError: false,
         errorMessage: null,
-        validationErrors: []
+        validationErrors: [],
       });
     })
-    .catch(err => {
-      console.log(err);
-      res.redirect("/");
+    .catch((err) => {
+      const error=new Error(err);
+      error.httpStatusCode =500;
+      return next();
     });
 };
 
@@ -96,9 +100,9 @@ exports.postEditProduct = (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
-    return res.status(422).render('admin/edit-product', {
-      pageTitle: 'Edit Product',
-      path: '/admin/edit-product',
+    return res.status(422).render("admin/edit-product", {
+      pageTitle: "Edit Product",
+      path: "/admin/edit-product",
       editing: true,
       hasError: true,
       product: {
@@ -106,17 +110,17 @@ exports.postEditProduct = (req, res, next) => {
         imageUrl: updatedImageUrl,
         price: updatedPrice,
         description: updatedDesc,
-        _id: prodId
+        _id: prodId,
       },
       errorMessage: errors.array()[0].msg,
-      validationErrors: errors.array()
+      validationErrors: errors.array(),
     });
   }
 
   Product.findById(prodId)
-    .then(product => {
+    .then((product) => {
       if (product.userId.toString() !== req.user._id.toString()) {
-        return res.redirect('/');
+        return res.redirect("/");
       }
       product.title = updatedTitle;
       product.price = updatedPrice;
@@ -124,15 +128,15 @@ exports.postEditProduct = (req, res, next) => {
       product.imageUrl = updatedImageUrl;
       return product.save();
     })
-    .then(result => {
-      console.log('UPDATED PRODUCT!');
-      res.redirect('/admin/products');
+    .then((result) => {
+      console.log("UPDATED PRODUCT!");
+      res.redirect("/admin/products");
     })
-    .catch(err => {
+    .catch((err) => {
       console.log(err);
-      res.status(500).render('admin/edit-product', {
-        pageTitle: 'Edit Product',
-        path: '/admin/edit-product',
+      res.status(500).render("admin/edit-product", {
+        pageTitle: "Edit Product",
+        path: "/admin/edit-product",
         editing: true,
         hasError: true,
         product: {
@@ -140,30 +144,30 @@ exports.postEditProduct = (req, res, next) => {
           imageUrl: updatedImageUrl,
           price: updatedPrice,
           description: updatedDesc,
-          _id: prodId
+          _id: prodId,
         },
-        errorMessage: 'Database operation failed, please try again.',
-        validationErrors: []
+        errorMessage: "Database operation failed, please try again.",
+        validationErrors: [],
       });
     });
 };
 
 exports.getProducts = (req, res, next) => {
   Product.find({ userId: req.user._id })
-    .then(products => {
+    .then((products) => {
       res.render("admin/products", {
         prods: products,
         pageTitle: "Admin Products",
-        path: "/admin/products"
+        path: "/admin/products",
       });
     })
-    .catch(err => {
+    .catch((err) => {
       console.log(err);
-      res.status(500).render('admin/products', {
-        pageTitle: 'Admin Products',
-        path: '/admin/products',
+      res.status(500).render("admin/products", {
+        pageTitle: "Admin Products",
+        path: "/admin/products",
         prods: [],
-        errorMessage: 'Fetching products failed, please try again later.'
+        errorMessage: "Fetching products failed, please try again later.",
       });
     });
 };
@@ -175,8 +179,9 @@ exports.postDeleteProduct = (req, res, next) => {
       console.log("DESTROYED PRODUCT");
       res.redirect("/admin/products");
     })
-    .catch(err => {
-      console.log(err);
-      res.status(500).redirect('/admin/products');
+    .catch((err) => {
+      const error=new Error(err);
+      error.httpStatusCode =500;
+      return next();
     });
 };
